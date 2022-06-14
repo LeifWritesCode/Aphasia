@@ -8,7 +8,8 @@
 
             if (args.Any(word => word.Equals("--bench")))
             {
-                var totalDays = Math.Ceiling(Math.Abs((Constants.Epoch - DateTime.UtcNow).TotalDays));
+                // found by brute force
+                var totalDays = 2314; //Math.Ceiling(Math.Abs((Constants.Epoch - DateTime.UtcNow).TotalDays));
                 var total = 0;
 
                 for (var i = 0; i < totalDays; i++)
@@ -24,7 +25,7 @@
                     total += guesses;
                     Console.WriteLine("Finished day {0} in {1} guesses.", i + 1, guesses);
                 }
-                var average = total / 209;
+                var average = total / totalDays;
                 Console.WriteLine("Finished all days. Average number of guesses was {0}", average);
             }
             else
@@ -40,7 +41,7 @@
 
                     Console.WriteLine("My guess, from {1} candidates, is: {0}", nextGuess.ToUpper(), solver.RemainingCandidates()); Console.Write("What was the response? ");
 
-                    response = Console.ReadLine().ToUpper();
+                    response = Console.ReadLine()?.ToUpper();
                     while (string.IsNullOrEmpty(response) ||
                            response.Where(character => Constants.ValidResponseCharacters.Contains(character)).Count() != Constants.WordLength)
                     {
