@@ -2,6 +2,31 @@
 
 namespace WordleSolver
 {
+    /// <summary>
+    /// Defines strategies for choosing the first word.
+    /// </summary>
+    internal enum FirstGuessStrategy
+    {
+        /// <summary>
+        /// Picks a word containing as many vowels as possible.
+        /// </summary>
+        /// <remarks>
+        /// Slightly better performance than <see cref="PrioritiseCommonLetters"/>.
+        /// </remarks>
+        PrioritiseVowels,
+
+        /// <summary>
+        /// Picks a word containing as many common letters as possible.
+        /// </summary>
+        PrioritiseCommonLetters,
+
+        /// <summary>
+        /// Computes frequency of all letters in the corpus, then computes a score for each word.
+        /// Strategy is to use the highest scoring word.
+        /// </summary>
+        SimpleFrequencyScore,
+    }
+
     internal class Solver
     {
 
@@ -16,19 +41,55 @@ namespace WordleSolver
             'e', 't', 'a', 'i', 'o', 'n', 's', 'h', 'r'
         };
 
+        /// <summary>
+        /// Vowels.
+        /// </summary>
+        private static readonly IEnumerable<char> sVowels = new List<char>()
+        {
+            'a', 'e', 'i', 'o', 'u'
+        };
+
         private string myLastGuess = string.Empty;
         private IEnumerable<string> myDictionary = Constants.Words;
 
         /// <summary>
-        /// Finds all words containing common letters, and returns a word containing five of them.
+        /// Computes first word using a simple frequency scoring algorithm.
         /// </summary>
-        /// <returns>A valid word containing five common letters.</returns>
-        private static string FirstGuess()
+        /// <returns>A valid word.</returns>
+        private static string SimpleFrequencyScore()
         {
-            var commons = sCommonLetters;
-            return Constants.Words
-                .Where(answer => commons.Sum(character => answer.Contains(character) ? 1 : 0) == Constants.WordLength)
-                .First();
+            // first create the individual letter frequency score.
+            var frequencies = new Dictionary<char, int>();
+            foreach (var word in Constants.Words)
+                foreach (var letter in word)
+                    frequencies[letter] = frequencies.TryGetValue(letter, out int freq) ? freq + 1 : 1;
+
+            // then use it to score the words.
+            var scored = new Dictionary<string, int>();
+            foreach (var word in Constants.Words)
+                scored[word] = word.Sum(letter => frequencies[letter]);
+
+            // sort the words by descending score, return the highest scoring.
+            return scored.OrderByDescending(kvp => kvp.Value).First().Key;
+        }
+
+        /// <summary>
+        /// Finds the first word according to the given search strategy.
+        /// </summary>
+        /// <returns>A valid word.</returns>
+        private static string FirstGuess(FirstGuessStrategy strategy = FirstGuessStrategy.SimpleFrequencyScore)
+        {
+            return strategy switch
+            {
+                FirstGuessStrategy.PrioritiseVowels => Constants.Words
+                    .OrderByDescending(answer => sVowels.Count(character => answer.Contains(character)))
+                    .First(),
+                FirstGuessStrategy.PrioritiseCommonLetters => Constants.Words
+                    .Where(answer => sCommonLetters.Count(character => answer.Contains(character)) == Constants.WordLength)
+                    .First(),
+                FirstGuessStrategy.SimpleFrequencyScore => SimpleFrequencyScore(),
+                _ => throw new ArgumentOutOfRangeException(nameof(strategy)),
+            };
         }
 
         /// <summary>

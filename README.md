@@ -7,3 +7,11 @@ Run me how you would any other C# application. Alternatively, use `program.cs` w
 ### Benchmark
 
 There is a bunchmark mode that can be accessed by executing `WordleSolver` with the `--bench` switch. Currently, this solver achieves an average of four guesses across all 2,314 challenges. However, the algorithm is naive in some areas and it does not manage to guess all days within the six guess limit. That's my next challenge!
+
+There are current three first word selection strategies, performing as below.
+
+| Strategy | Successes within six tries (out of 2314) | Method |
+| -------- | ---------------------------------------- | ------ |
+| Prioritise Common Characters | 2226 | Picks a word containing as many commonly used characters (in all English) as possible. |
+| Prioritise Vowels | 2207 | Picks a word containing as many vowels as possible. |
+| Simple Frequency Score | 2140 | Assigns a frequency score to letters in the corpus, then scores the corpus according to those. Uses the highest scoring word. |

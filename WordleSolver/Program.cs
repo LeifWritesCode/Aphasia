@@ -11,6 +11,7 @@
                 // found by brute force
                 var totalDays = 2314; //Math.Ceiling(Math.Abs((Constants.Epoch - DateTime.UtcNow).TotalDays));
                 var total = 0;
+                var frequencyOfGuesses = new Dictionary<int, int>();
 
                 for (var i = 0; i < totalDays; i++)
                 {
@@ -21,12 +22,16 @@
                     {
                         throw new Exception("failed to guess the world.");
                     }
+                    frequencyOfGuesses[guesses] = frequencyOfGuesses.TryGetValue(guesses, out int freq) ? freq + 1 : 1;
 
                     total += guesses;
                     Console.WriteLine("Finished day {0} in {1} guesses.", i + 1, guesses);
                 }
                 var average = total / totalDays;
                 Console.WriteLine("Finished all days. Average number of guesses was {0}", average);
+                Console.WriteLine("Frequency table (descending.)");
+                Console.WriteLine(string.Join(Environment.NewLine, frequencyOfGuesses.OrderByDescending(kvp => kvp.Value)));
+                Console.WriteLine("Legal Results: {0}", frequencyOfGuesses.Sum(kvp => kvp.Key <= 6 ? kvp.Value : 0));
             }
             else
             {
