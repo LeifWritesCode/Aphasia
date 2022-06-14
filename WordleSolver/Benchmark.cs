@@ -7,6 +7,12 @@
     {
         public static int Play(DateTime gameDay)
         {
+            return Play(gameDay, null);
+        }
+
+        public static int Play(DateTime gameDay, string[] starts)
+     
+        {
             var diff = Constants.Epoch - gameDay;
             var index = (int)Math.Ceiling(Math.Abs(diff.TotalMilliseconds) / Constants.ADayInMs) + 1;
             var theAnswer = Constants.Words.ElementAt(index);
@@ -14,7 +20,17 @@
 
             var guesses = 0;
             var response = string.Empty;
-            var solver = new Solver();
+
+            Solver solver;
+            if (starts is not null)
+            {
+                solver = new Solver(starts);
+            }
+            else
+            {
+                solver = new Solver();
+            }
+
             while (true)
             {
                 guesses++;
@@ -30,11 +46,11 @@
                     return -1;
                 }
 
-                Console.WriteLine("Solver guessed: {0}", theGuess);
+                //Console.WriteLine("Solver guessed: {0}", theGuess);
                 // if we got it right, return the total guess count.
                 if (theGuess.Equals(theAnswer))
                 {
-                    Console.WriteLine("That was the right answer!");
+                    //Console.WriteLine("That was the right answer!");
                     return guesses;
                 }
 
@@ -58,7 +74,7 @@
                         response += "W";
                     }
                 }
-                Console.WriteLine("The response is: {0}", response);
+                //Console.WriteLine("The response is: {0}", response);
             }
         }
     }

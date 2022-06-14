@@ -50,35 +50,106 @@ namespace WordleSolver
         };
 
         private string myLastGuess = string.Empty;
-        private IEnumerable<string> myDictionary = Constants.Words;
+        private IEnumerable<KeyValuePair<string, int>> myDictionary;
+
+        /// <summary>
+        /// Oxford Dictionary (9th edition, 1995) frequency table.
+        /// </summary>
+        /// <remarks>
+        /// These are the relative frequencies, where Q is the least frequent.
+        /// </remarks>
+        private static readonly IDictionary<char, double> frequencies = new Dictionary<char, double>()
+        {
+            { 'e', 56.88 },
+            { 'a', 43.31 },
+            { 'r', 38.64 },
+            { 'i', 38.45 },
+            { 'o', 36.51 },
+            { 't', 35.43 },
+            { 'n', 33.92 },
+            { 's', 29.23 },
+            { 'l', 27.98 },
+            { 'c', 21.13 },
+            { 'u', 18.51 },
+            { 'd', 17.25 },
+            { 'p', 16.04 },
+            { 'm', 15.36 },
+            { 'h', 15.31 },
+            { 'g', 12.59 },
+            { 'b', 10.56 },
+            { 'f', 9.24 },
+            { 'y', 9.06 },
+            { 'w', 6.57 },
+            { 'k', 5.61 },
+            { 'v', 5.13 },
+            { 'x', 1.48 },
+            { 'z', 1.39 },
+            { 'j', 1.01 },
+            { 'q', 1.0 },
+        };
+
+        /// <summary>
+        /// character frequencies by position
+        /// </summary>
+        private readonly IDictionary<char, int[]> positionalFrequencies =
+            new Dictionary<char, int[]>();
+
+        public Solver()
+        {
+            // compute positional frequencies
+            for (var i = 0; i < Constants.WordLength; i++)
+            {
+                foreach (var word in Constants.Words)
+                {
+                    var character = word[i];
+                    if (!positionalFrequencies.ContainsKey(character))
+                    {
+                        positionalFrequencies[character] = new int[] { 0, 0, 0, 0, 0 };
+                    }
+                    positionalFrequencies[character][i]++;
+                }
+            }
+
+            // sort using the positional frequencies
+            var temp = new Dictionary<string, int>();
+            foreach (var word in Constants.Words)
+            {
+                var sum = 0;
+                for (var i = 0; i < Constants.WordLength; i++)
+                {
+                    sum += (positionalFrequencies[word[i]][i] / word.Count(character => character == word[i])) + (int)frequencies[word[i]];
+                }
+                temp[word] = sum;
+            }
+
+            // then order and assign
+            myDictionary = temp.OrderByDescending(kvp => kvp.Value);
+            firsts = new string[] { "jaunt", "sower", "flimp" };
+        }
+
+        public Solver(string[] starts)
+            : this()
+        {
+            firsts = starts;
+        }
+
+        string[] firsts;
 
         /// <summary>
         /// Computes first word using a simple frequency scoring algorithm.
         /// </summary>
         /// <returns>A valid word.</returns>
-        private static string SimpleFrequencyScore()
+        private string SimpleFrequencyScore()
         {
-            // first create the individual letter frequency score.
-            var frequencies = new Dictionary<char, int>();
-            foreach (var word in Constants.Words)
-                foreach (var letter in word)
-                    frequencies[letter] = frequencies.TryGetValue(letter, out int freq) ? freq + 1 : 1;
-
-            // then use it to score the words.
-            var scored = new Dictionary<string, int>();
-            foreach (var word in Constants.Words)
-                // updated to divide the frequency score by the number of times the letter appears
-                scored[word] = word.Sum(letter => frequencies[letter] / word.Count(letter2 => letter2 == letter));
-
-            // sort the words by descending score, return the highest scoring.
-            return scored.OrderByDescending(kvp => kvp.Value).First().Key;
+            // words are now pre-scored and pre-sorted.
+            return myDictionary.First().Key;
         }
 
         /// <summary>
         /// Finds the first word according to the given search strategy.
         /// </summary>
         /// <returns>A valid word.</returns>
-        private static string FirstGuess(FirstGuessStrategy strategy = FirstGuessStrategy.SimpleFrequencyScore)
+        private string FirstGuess(FirstGuessStrategy strategy = FirstGuessStrategy.PrioritiseCommonLetters)
         {
             return strategy switch
             {
@@ -102,6 +173,8 @@ namespace WordleSolver
             return myDictionary.Count();
         }
 
+        private int guessesSoFar = 0;
+
         /// <summary>
         /// Given the last guess, the response, and the remaining pool of words, infers a high-probability next guess.
         /// </summary>
@@ -111,10 +184,9 @@ namespace WordleSolver
         /// <exception cref="InvalidOperationException">If no guess possible.</exception>
         public string Guess(string response)
         {
-            // if last guess is empty, we haven't guessed yet
             if (string.IsNullOrEmpty(myLastGuess))
             {
-                myLastGuess = FirstGuess();
+                myLastGuess = firsts[guessesSoFar++];
                 return myLastGuess;
             }
 
@@ -143,7 +215,6 @@ namespace WordleSolver
             // candidates that don't match are included if they contain the characters
             // in yellows_arr
             // represents the yellow responses
-            var yellows = "";
             var yellows_arr = Array.Empty<char>();
 
             // just parse the input sequentially
@@ -158,17 +229,16 @@ namespace WordleSolver
                     case 'W':
                         whites += letter;
                         greens += '.';
-                        yellows += '.';
+                        yellows_arr = yellows_arr.Append('#').ToArray();
                         break;
 
                     case 'G':
                         greens += letter;
-                        yellows += '.';
+                        yellows_arr = yellows_arr.Append('#').ToArray();
                         break;
 
                     case 'Y':
                         greens += '.';
-                        yellows += letter;
                         yellows_arr = yellows_arr.Append(letter).ToArray();
                         break;
                 }
@@ -177,14 +247,18 @@ namespace WordleSolver
             // to generate the new pool, we can start by including all words that match our green responses
             greens = $"^{greens}$";
             myDictionary = myDictionary
-                .Where(ans => Regex.IsMatch(ans, greens));
+                .Where(ans => Regex.IsMatch(ans.Key, greens));
 
             // lastly, if there were yellows, we include those which aren't a match but include a constituent character
             if (yellows_arr.Length > 0)
             {
-                yellows = $"^{yellows}$";
-                myDictionary = myDictionary
-                    .Where(ans => !Regex.IsMatch(ans, yellows) && yellows_arr.All(chr => ans.Contains(chr)));
+                for (var i = 0; i < yellows_arr.Length - 1; i++)
+                {
+                    var c = yellows_arr[i];
+                    if (c == '#')
+                        continue;
+                    myDictionary = myDictionary.Where(ans => ans.Key[i] != c && ans.Key.Contains(c));
+                }
             }
 
             // we now need to reconcile the whites expression with the other expressions
@@ -195,7 +269,7 @@ namespace WordleSolver
                 // we then eliminate all words that match the whites expression
                 whites = $"^[^{whites}]+$";
                 myDictionary = myDictionary
-                    .Where(ans => Regex.IsMatch(ans, whites));
+                    .Where(ans => Regex.IsMatch(ans.Key, whites));
             }
 
             // uncomment this line to see what my regular expressions were
@@ -206,7 +280,8 @@ namespace WordleSolver
                 throw new InvalidOperationException("ran out of candidates to pick from");
             }
 
-            myLastGuess = myDictionary.First();
+            // return firsts for first three guesses, else whatevers in the dictionary
+            myLastGuess = guessesSoFar < firsts.Length ? firsts[guessesSoFar++] : myDictionary.First().Key;
             return myLastGuess;
         }
     }
