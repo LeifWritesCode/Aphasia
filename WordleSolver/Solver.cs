@@ -67,7 +67,8 @@ namespace WordleSolver
             // then use it to score the words.
             var scored = new Dictionary<string, int>();
             foreach (var word in Constants.Words)
-                scored[word] = word.Sum(letter => frequencies[letter]);
+                // updated to divide the frequency score by the number of times the letter appears
+                scored[word] = word.Sum(letter => frequencies[letter] / word.Count(letter2 => letter2 == letter));
 
             // sort the words by descending score, return the highest scoring.
             return scored.OrderByDescending(kvp => kvp.Value).First().Key;

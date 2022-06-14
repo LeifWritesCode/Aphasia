@@ -12,6 +12,6 @@ There are current three first word selection strategies, performing as below.
 
 | Strategy | Successes within six tries (out of 2314) | Method |
 | -------- | ---------------------------------------- | ------ |
+| Simple Frequency Score | 2253 | Assigns a frequency score to letters in the corpus, then scores the corpus according to those. Divides the character score by number of occurrences. Uses the highest scoring word. |
 | Prioritise Common Characters | 2226 | Picks a word containing as many commonly used characters (in all English) as possible. |
 | Prioritise Vowels | 2207 | Picks a word containing as many vowels as possible. |
-| Simple Frequency Score | 2140 | Assigns a frequency score to letters in the corpus, then scores the corpus according to those. Uses the highest scoring word. |
